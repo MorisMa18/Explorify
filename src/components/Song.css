@@ -1,0 +1,36 @@
+.song {
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  margin: 30px;
+  /* border: 2px solid white; */
+}
+
+.song__left {
+  display: flex;
+  flex-direction: row;
+}
+
+.songInfo {
+  padding-left: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.song__right {
+  display: flex;
+  align-items: center;
+}
+
+.menuButton {
+  margin: 1.5vh;
+}
+
+.menuButton > .MuiSvgIcon-root {
+  font-size: xx-large;
+}
+
+.menuButton :hover {
+  color: #1db954;
+}

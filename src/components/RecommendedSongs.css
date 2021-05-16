@@ -1,0 +1,12 @@
+.recommendations {
+  margin-top: 10vh;
+}
+
+.recommendations > h2 {
+  margin-left: 40px;
+  color: white;
+}
+
+.songs {
+  margin: 100px 200px;
+}
