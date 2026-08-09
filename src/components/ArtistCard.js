@@ -1,17 +1,13 @@
-import React from "react";
 import "./ArtistCard.css";
+import emptyMixImage from "../images/emptymix.svg";
 
 function ArtistCard(props) {
+  const artistPhoto = props.artist.images?.[0]?.url || emptyMixImage;
+
   return (
     <div className="cardContainer">
       <div className="topContainer">
-        {console.log(props)}
-        {/* TODO: Some artists don't have profile pic */}
-        <img
-          className="artistPhoto"
-          src={props.artist.images[0].url}
-          alt="Artist Profile"
-        ></img>
+        <img className="artistPhoto" src={artistPhoto} alt="Artist Profile"></img>
       </div>
       <div className="bottomContainer">
         <h2 className="artistName">{props.artist.name}</h2>

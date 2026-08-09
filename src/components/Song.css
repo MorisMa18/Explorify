@@ -34,3 +34,17 @@
 .menuButton :hover {
   color: #1db954;
 }
+
+.disabledIcon {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.disabledIcon:hover {
+  color: inherit;
+}
+
+.playbackError {
+  color: #e05353;
+  margin: -15px 30px 15px;
+}

@@ -1,6 +1,7 @@
-import React from "react";
-import "../components/flipCard.css";
-import { selectSong } from "../features/songSlice";
+"use client";
+
+import "./FlipCard.css";
+import { selectSong } from "@/store/songSlice";
 import { useSelector } from "react-redux";
 
 function FlipCard() {

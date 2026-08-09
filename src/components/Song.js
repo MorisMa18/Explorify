@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
-import "../components/Song.css";
+"use client";
 
-// Spotify API
-import SpotifyWebApi from "spotify-web-api-js";
+import { useEffect, useRef, useState } from "react";
+import "./Song.css";
 
 // Icons
 import PlayCircleOutlineRoundedIcon from "@material-ui/icons/PlayCircleOutlineRounded";
@@ -13,93 +12,113 @@ import AirplayIcon from "@material-ui/icons/Airplay";
 import AddToPlaylistButton from "./AddToPlaylistButton";
 import PlaylistDropdown from "./PlaylistDropdown";
 
-// Create instance of Spotify API
-const spotify = new SpotifyWebApi();
+// Redux
+import { useDispatch, useSelector } from "react-redux";
+import { selectNowPlayingTrackId, setNowPlayingTrack } from "@/store/songSlice";
 
-function Song(track) {
-  let dropdownTopCoord;
+function Song({ track }) {
+  const dispatch = useDispatch();
+  const nowPlayingTrackId = useSelector(selectNowPlayingTrackId);
+  const isPlaying = nowPlayingTrackId === track.id;
+
+  const audioRef = useRef(null);
+  const dropdownButtonRef = useRef(null);
+  const [dropdownTopCoord, setDropdownTopCoord] = useState(0);
+  const [playbackError, setPlaybackError] = useState(null);
+
+  // Locate where the playlist dropdown should appear, once, on mount.
   useEffect(() => {
-    dropdownTopCoord = document
-      .querySelector(".dropdownButton")
-      .getBoundingClientRect().top;
-  });
-  // Request headers to play a track in spotify
-  const requestHeader = {
-    uris: [track.track.uri],
-    position_ms: 0,
-  };
-  const audio = new Audio(track.track.preview_url);
-  const [playing, setPlaying] = useState(false);
-  const [currPlaying, setCurrPlaying] = useState();
+    if (dropdownButtonRef.current) {
+      setDropdownTopCoord(dropdownButtonRef.current.getBoundingClientRect().top);
+    }
+  }, []);
 
-  const playAudio = () => {
-    audio.play();
-    setCurrPlaying(audio);
+  // If another Song row starts playing, stop this one's preview.
+  useEffect(() => {
+    if (!isPlaying && audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
 
-    // Automatically change pause -> play when audio ends
-    const timer = setInterval(function () {
-      if (audio.currentTime > 30) {
-        clearInterval(timer);
-        setPlaying(false);
-      }
-    }, 1000);
-  };
-
-  const pauseAudio = () => {
-    console.log("paused");
-    currPlaying.pause();
-  };
-
-  function playInSpotify() {
-    spotify.play(requestHeader);
+  function getAudio() {
+    if (!audioRef.current && track.preview_url) {
+      audioRef.current = new Audio(track.preview_url);
+      audioRef.current.addEventListener("ended", () => {
+        dispatch(setNowPlayingTrack(null));
+      });
+    }
+    return audioRef.current;
   }
 
-  // Locate where the dropdown should appear
+  function togglePreview() {
+    const audio = getAudio();
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      dispatch(setNowPlayingTrack(null));
+    } else {
+      audio.currentTime = 0;
+      audio.play();
+      dispatch(setNowPlayingTrack(track.id));
+    }
+  }
+
+  async function playInSpotify() {
+    setPlaybackError(null);
+    try {
+      const response = await fetch("/api/spotify/playback", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackUri: track.uri }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Playback failed");
+      }
+    } catch (err) {
+      setPlaybackError(err.message);
+    }
+  }
+
+  const albumArt = track.album.images[1]?.url ?? track.album.images[0]?.url;
 
   return (
-    <div className="song">
-      <div className="song__left">
-        <img
-          src={track.track.album.images[1].url}
-          alt="Album Cover"
-          heigh="100"
-          width="100"
-        />
-        <div className="songInfo">
-          <h3>{track.track.name}</h3>
-          <p> {track.track.artists[0].name}</p>
+    <div className="songWrapper">
+      <div className="song">
+        <div className="song__left">
+          <img src={albumArt} alt="Album Cover" heigh="100" width="100" />
+          <div className="songInfo">
+            <h3>{track.name}</h3>
+            <p> {track.artists[0].name}</p>
+          </div>
+        </div>
+        <div className="song__right">
+          <div className="menuButton">
+            {track.preview_url ? (
+              isPlaying ? (
+                <PauseCircleOutlineIcon onClick={togglePreview} />
+              ) : (
+                <PlayCircleOutlineRoundedIcon onClick={togglePreview} />
+              )
+            ) : (
+              <PlayCircleOutlineRoundedIcon
+                className="disabledIcon"
+                titleAccess="Preview unavailable for this track"
+              />
+            )}
+          </div>
+          <div className="menuButton">
+            <AirplayIcon onClick={playInSpotify} titleAccess="Play in Spotify" />
+          </div>
+          <div className="dropdownButton" ref={dropdownButtonRef}>
+            <AddToPlaylistButton>
+              <PlaylistDropdown topCoord={dropdownTopCoord} trackUri={track.uri}></PlaylistDropdown>
+            </AddToPlaylistButton>
+          </div>
         </div>
       </div>
-      <div className="song__right">
-        <div className="menuButton">
-          {playing ? (
-            <PauseCircleOutlineIcon
-              onClick={() => {
-                pauseAudio();
-                setPlaying(!playing);
-              }}
-            />
-          ) : (
-            <PlayCircleOutlineRoundedIcon
-              onClick={() => {
-                playAudio();
-                setPlaying(!playing);
-              }}
-            />
-          )}
-        </div>
-        <div className="menuButton">
-          <AirplayIcon onClick={playInSpotify} />
-        </div>
-        <div className="dropdownButton">
-          <AddToPlaylistButton>
-            <PlaylistDropdown
-              topCoord={dropdownTopCoord}
-              trackUri={track.track.uri}
-            ></PlaylistDropdown>
-          </AddToPlaylistButton>
-        </div>
-      </div>
+      {playbackError && <p className="playbackError">{playbackError}</p>}
     </div>
   );
 }
