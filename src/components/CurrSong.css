@@ -106,9 +106,39 @@
   color: white;
 }
 
+.analysisText {
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 40px;
+}
+
+.explicitBadge {
+  display: inline-block;
+  background-color: #484a4d;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
 .albumCover {
   background-color: #2f3135;
   padding: 20px;
   margin-top: 45px;
+}
+
+.checkSongButton:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.discoverMessage {
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 15px;
+}
+
+.discoverError {
+  color: #e05353;
+  margin-top: 15px;
 }
 

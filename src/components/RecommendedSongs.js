@@ -1,12 +1,13 @@
-import React from "react";
-import "../components/RecommendedSongs.css";
+"use client";
+
+import "./RecommendedSongs.css";
 
 // Componenets
 import Song from "./Song";
 
 // Redux Stuff
 import { useSelector } from "react-redux";
-import { selectSongRecommendations } from "../features/songSlice";
+import { selectSongRecommendations } from "@/store/songSlice";
 
 function RecommendedSongs() {
   const songRecommendations = useSelector(selectSongRecommendations);
@@ -16,7 +17,7 @@ function RecommendedSongs() {
       <h2> Songs You Might Like </h2>
       <div className="songs">
         {songRecommendations.length !== 0 ? (
-          songRecommendations.tracks.map((track) => <Song track={track} />)
+          songRecommendations.map((track) => <Song key={track.id} track={track} />)
         ) : (
           <h1> uno pic here :) </h1>
         )}

@@ -1,105 +1,68 @@
-import React, { useEffect } from "react";
-import "../components/CurrSong.css";
+"use client";
+
+import { useState } from "react";
+import "./CurrSong.css";
 import emptyMixImage from "../images/emptymix.svg";
 
 // Song Reducer
-import { selectSong, selectSongFeature } from "../features/songSlice";
 import {
-  updateCurrSong,
-  updateAudioFeature,
-  updateSongRecommendations,
-  updateArtistRecommendations,
-} from "../features/songSlice";
+  selectSong,
+  selectSongAnalysis,
+  selectNoActivePlayback,
+  updateDiscoverResults,
+  setNoActivePlayback,
+} from "@/store/songSlice";
 
 // UI Components
 import { ProgressBar } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
-import FlipCard from "../components/flipCard";
-
-// Spotify API
-import SpotifyWebApi from "spotify-web-api-js";
+import FlipCard from "./FlipCard";
 
 // Redux
 import { useDispatch, useSelector } from "react-redux";
 
-// Create instance of Spotify API
-const spotify = new SpotifyWebApi();
+function formatDuration(durationMs) {
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
 
 function CurrSong() {
   // Styling
   const linearBarStyle = { marginBottom: 40 };
 
-  // API and Redux Stuff
+  // Redux Stuff
   const dispatch = useDispatch();
   const currSong = useSelector(selectSong);
-  const currSongFeature = useSelector(selectSongFeature);
+  const songAnalysis = useSelector(selectSongAnalysis);
+  const noActivePlayback = useSelector(selectNoActivePlayback);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   async function getCurrPlaying() {
-    // Get current track info
-    const currTrack = await spotify.getMyCurrentPlaybackState();
-    console.log(currTrack);
+    setLoading(true);
+    setError(null);
 
-    // Get current track's audio info
-    const currTrackFeature = await spotify.getAudioFeaturesForTracks(
-      `${currTrack.item.id}`
-    );
-    console.log(currTrackFeature);
+    try {
+      const response = await fetch("/api/spotify/discover", { method: "POST" });
+      const data = await response.json();
 
-    // Get song recommendation
-    const songRecommendations = await spotify.getRecommendations({
-      limit: 20,
-      seed_artists: currTrack.item.artists[0].id,
-      seed_tracks: currTrack.item.id,
-      target_acousticness: currTrackFeature.audio_features[0].acousticness,
-      target_danceability: currTrackFeature.audio_features[0].danceability,
-      target_energy: currTrackFeature.audio_features[0].energy,
-      starget_instrumentalness:
-        currTrackFeature.audio_features[0].instrumentalness,
-      target_valence: currTrackFeature.audio_features[0].valence,
-      target_speechiness: currTrackFeature.audio_features[0].speechiness,
-    });
-    console.log(songRecommendations);
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong, please try again.");
+      }
 
-    // Get artist recommandation
-    const artistRecommendations = await spotify.getArtistRelatedArtists(
-      currTrack.item.artists[0].id
-    );
-    console.log(artistRecommendations);
-
-    dispatch(
-      updateCurrSong({
-        songId: currTrack.item.id,
-        songName: currTrack.item.name,
-        songArtist: currTrack.item.artists[0].name,
-        songArtistId: currTrack.item.artists[0].id,
-        songPicture: currTrack.item.album.images[0].url,
-        songPopularity: currTrack.item.popularity,
-      })
-    );
-
-    dispatch(
-      updateAudioFeature({
-        songAcousticness: currTrackFeature.audio_features[0].acousticness,
-        songDanceability: currTrackFeature.audio_features[0].danceability,
-        songEnergy: currTrackFeature.audio_features[0].energy,
-        songInstrumentalness:
-          currTrackFeature.audio_features[0].instrumentalness,
-        songValence: currTrackFeature.audio_features[0].valence,
-        songSpeechiness: currTrackFeature.audio_features[0].speechiness,
-      })
-    );
-
-    dispatch(
-      updateSongRecommendations({
-        tracks: songRecommendations.tracks,
-      })
-    );
-
-    dispatch(
-      updateArtistRecommendations({
-        artists: artistRecommendations.artists,
-      })
-    );
+      if (data.noActivePlayback) {
+        dispatch(setNoActivePlayback());
+      } else {
+        dispatch(updateDiscoverResults(data));
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -108,7 +71,6 @@ function CurrSong() {
         {currSong ? (
           <h1 className="fixed"> {currSong.songName} </h1>
         ) : (
-          // <h1 className = 'overflow'> {currSong.songName} </h1>
           <h1 className="overflow">
             {" "}
             Welcome to Explorify! Click the 'Start' button to get started{" "}
@@ -130,62 +92,41 @@ function CurrSong() {
               height="530"
             />
           )}
-          <button className="checkSongButton" onClick={getCurrPlaying}>
+          <button className="checkSongButton" onClick={getCurrPlaying} disabled={loading}>
             {" "}
-            DISCOVER NEW SONGS!{" "}
+            {loading ? "LOADING..." : "DISCOVER NEW SONGS!"}{" "}
           </button>
+          {noActivePlayback && (
+            <p className="discoverMessage">
+              Nothing is playing right now — start a song on Spotify and try again.
+            </p>
+          )}
+          {error && <p className="discoverError">{error}</p>}
         </div>
 
         <div className="analyzer">
           {currSong ? (
             <div className="progressBars">
-              <h3>Acousticness</h3>
+              <h3>Popularity</h3>
               <ProgressBar
                 striped
                 animated
-                now={currSongFeature.songAcousticness * 100}
+                now={songAnalysis.popularity}
                 style={linearBarStyle}
               />
 
-              <h3>Danceability</h3>
-              <ProgressBar
-                striped
-                animated
-                now={currSongFeature.songDanceability * 100}
-                style={linearBarStyle}
-              />
+              <h3>Genres</h3>
+              <p className="analysisText">
+                {songAnalysis.genres.length !== 0 ? songAnalysis.genres.join(", ") : "Unknown"}
+              </p>
 
-              <h3>Energy</h3>
-              <ProgressBar
-                striped
-                animated
-                now={currSongFeature.songEnergy * 100}
-                style={linearBarStyle}
-              />
+              <h3>Release Date</h3>
+              <p className="analysisText">{songAnalysis.releaseDate || "Unknown"}</p>
 
-              <h3>Instrumentalness</h3>
-              <ProgressBar
-                striped
-                animated
-                now={currSongFeature.songInstrumentalness * 100}
-                style={linearBarStyle}
-              />
+              <h3>Duration</h3>
+              <p className="analysisText">{formatDuration(songAnalysis.durationMs)}</p>
 
-              <h3>Valence</h3>
-              <ProgressBar
-                striped
-                animated
-                now={currSongFeature.songValence * 100}
-                style={linearBarStyle}
-              />
-
-              <h3>Speechiness</h3>
-              <ProgressBar
-                striped
-                animated
-                now={currSongFeature.songSpeechiness * 100}
-                style={linearBarStyle}
-              />
+              {songAnalysis.explicit && <p className="explicitBadge">EXPLICIT</p>}
             </div>
           ) : (
             <h2> A Picture Here </h2>

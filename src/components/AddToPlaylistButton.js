@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState } from "react";
 import "./AddToPlaylistButton.css";
 
 import MoreVertRoundedIcon from "@material-ui/icons/MoreVertRounded";
 
 function AddToPlaylistButton(props) {
-  const [open, setOpen] = useState();
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="playlist_dropdown_button">
