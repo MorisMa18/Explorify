@@ -1,7 +1,12 @@
 import "./ArtistCard.css";
 import emptyMixImage from "../images/emptymix.svg";
+import type { SpotifyArtist } from "@/types/spotify";
 
-function ArtistCard(props) {
+interface ArtistCardProps {
+  artist: SpotifyArtist;
+}
+
+function ArtistCard(props: ArtistCardProps) {
   const artistPhoto = props.artist.images?.[0]?.url || emptyMixImage;
 
   return (

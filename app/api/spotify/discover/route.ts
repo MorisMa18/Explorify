@@ -1,13 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken, spotifyFetch, SpotifyApiError } from "@/lib/spotifyApi";
+import { getErrorMessage } from "@/lib/errors";
+import type {
+  DiscoverResponse,
+  SpotifyArtist,
+  SpotifyCurrentlyPlaying,
+  SpotifySearchArtistsResponse,
+  SpotifySearchTracksResponse,
+  SpotifyTopTracksResponse,
+  SpotifyTrack,
+} from "@/types/spotify";
 
 export const runtime = "nodejs";
 
 const MARKET = "US";
 
-function dedupeById(items) {
-  const seen = new Set();
-  const result = [];
+function dedupeById<T extends { id?: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
   for (const item of items) {
     if (!item?.id || seen.has(item.id)) continue;
     seen.add(item.id);
@@ -23,14 +33,14 @@ function dedupeById(items) {
 // current artist's own top tracks, plus genre-filtered Search results, plus catalog
 // metadata (popularity/genres/release date/duration) in place of Spotify's own
 // audio-feature analysis.
-export async function POST(req) {
+export async function POST(req: NextRequest): Promise<NextResponse<DiscoverResponse>> {
   const accessToken = await getAccessToken(req);
   if (!accessToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {
-    const playback = await spotifyFetch(accessToken, "/me/player");
+    const playback = await spotifyFetch<SpotifyCurrentlyPlaying>(accessToken, "/me/player");
     if (!playback || !playback.item) {
       return NextResponse.json({ noActivePlayback: true });
     }
@@ -39,22 +49,22 @@ export async function POST(req) {
     const artistId = track.artists[0].id;
 
     const [artist, topTracksResponse] = await Promise.all([
-      spotifyFetch(accessToken, `/artists/${artistId}`),
-      spotifyFetch(accessToken, `/artists/${artistId}/top-tracks?market=${MARKET}`),
+      spotifyFetch<SpotifyArtist>(accessToken, `/artists/${artistId}`),
+      spotifyFetch<SpotifyTopTracksResponse>(accessToken, `/artists/${artistId}/top-tracks?market=${MARKET}`),
     ]);
 
-    const topGenre = artist.genres?.[0];
+    const topGenre = artist?.genres?.[0];
 
     // Best-effort genre augmentation: if Search behaves unexpectedly for a given
     // genre string, fall back to just the artist's own top tracks rather than
     // failing the whole request.
-    let genreTracks = [];
-    let genreArtists = [];
+    let genreTracks: SpotifyTrack[] = [];
+    let genreArtists: SpotifyArtist[] = [];
     if (topGenre) {
       const genreQuery = encodeURIComponent(`genre:"${topGenre}"`);
 
       try {
-        const genreTracksResponse = await spotifyFetch(
+        const genreTracksResponse = await spotifyFetch<SpotifySearchTracksResponse>(
           accessToken,
           `/search?q=${genreQuery}&type=track&market=${MARKET}&limit=20`
         );
@@ -64,7 +74,7 @@ export async function POST(req) {
       }
 
       try {
-        const genreArtistsResponse = await spotifyFetch(
+        const genreArtistsResponse = await spotifyFetch<SpotifySearchArtistsResponse>(
           accessToken,
           `/search?q=${genreQuery}&type=artist&market=${MARKET}&limit=20`
         );
@@ -97,7 +107,7 @@ export async function POST(req) {
         explicit: track.explicit,
         durationMs: track.duration_ms,
         releaseDate: track.album.release_date,
-        genres: artist.genres ?? [],
+        genres: artist?.genres ?? [],
       },
       songRecommendations,
       artistRecommendations,
@@ -107,8 +117,14 @@ export async function POST(req) {
     const message =
       status === 429
         ? "Spotify is rate-limiting requests right now — try again in a moment."
-        : error.message || "Discover failed";
-    console.error("[/api/spotify/discover]", status, error.path, error.message, error.rawBody);
+        : getErrorMessage(error) || "Discover failed";
+    console.error(
+      "[/api/spotify/discover]",
+      status,
+      error instanceof SpotifyApiError ? error.path : undefined,
+      getErrorMessage(error),
+      error instanceof SpotifyApiError ? error.rawBody : undefined
+    );
     return NextResponse.json({ error: message }, { status });
   }
 }

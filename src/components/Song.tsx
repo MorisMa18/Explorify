@@ -13,18 +13,25 @@ import AddToPlaylistButton from "./AddToPlaylistButton";
 import PlaylistDropdown from "./PlaylistDropdown";
 
 // Redux
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectNowPlayingTrackId, setNowPlayingTrack } from "@/store/songSlice";
 
-function Song({ track }) {
-  const dispatch = useDispatch();
-  const nowPlayingTrackId = useSelector(selectNowPlayingTrackId);
+import { getErrorMessage } from "@/lib/errors";
+import type { SpotifyTrack } from "@/types/spotify";
+
+interface SongProps {
+  track: SpotifyTrack;
+}
+
+function Song({ track }: SongProps) {
+  const dispatch = useAppDispatch();
+  const nowPlayingTrackId = useAppSelector(selectNowPlayingTrackId);
   const isPlaying = nowPlayingTrackId === track.id;
 
-  const audioRef = useRef(null);
-  const dropdownButtonRef = useRef(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const dropdownButtonRef = useRef<HTMLDivElement | null>(null);
   const [dropdownTopCoord, setDropdownTopCoord] = useState(0);
-  const [playbackError, setPlaybackError] = useState(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   // Locate where the playlist dropdown should appear, once, on mount.
   useEffect(() => {
@@ -77,7 +84,7 @@ function Song({ track }) {
         throw new Error(data.error || "Playback failed");
       }
     } catch (err) {
-      setPlaybackError(err.message);
+      setPlaybackError(getErrorMessage(err));
     }
   }
 
@@ -87,7 +94,7 @@ function Song({ track }) {
     <div className="songWrapper">
       <div className="song">
         <div className="song__left">
-          <img src={albumArt} alt="Album Cover" heigh="100" width="100" />
+          <img src={albumArt} alt="Album Cover" height="100" width="100" />
           <div className="songInfo">
             <h3>{track.name}</h3>
             <p> {track.artists[0].name}</p>

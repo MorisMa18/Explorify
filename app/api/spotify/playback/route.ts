@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken, spotifyFetch, SpotifyApiError } from "@/lib/spotifyApi";
+import { getErrorMessage } from "@/lib/errors";
 
 export const runtime = "nodejs";
 
 // Starts full-track playback on the user's active device (the "Airplay" button).
 // Premium-only on Spotify's side — surfaced as a clear error rather than a silent failure.
-export async function PUT(req) {
+export async function PUT(req: NextRequest) {
   const accessToken = await getAccessToken(req);
   if (!accessToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { trackUri } = await req.json();
+  const { trackUri }: { trackUri?: string } = await req.json();
   if (!trackUri) {
     return NextResponse.json({ error: "trackUri is required" }, { status: 400 });
   }
@@ -24,7 +25,7 @@ export async function PUT(req) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     const status = error instanceof SpotifyApiError ? error.status : 500;
-    let message = error.message || "Playback failed";
+    let message = getErrorMessage(error) || "Playback failed";
     if (status === 403) {
       message = "Full playback requires Spotify Premium.";
     } else if (status === 404) {

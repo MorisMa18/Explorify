@@ -19,9 +19,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import FlipCard from "./FlipCard";
 
 // Redux
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-function formatDuration(durationMs) {
+import { getErrorMessage } from "@/lib/errors";
+import type { DiscoverResponse } from "@/types/spotify";
+
+function formatDuration(durationMs: number) {
   const totalSeconds = Math.round(durationMs / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -33,13 +36,13 @@ function CurrSong() {
   const linearBarStyle = { marginBottom: 40 };
 
   // Redux Stuff
-  const dispatch = useDispatch();
-  const currSong = useSelector(selectSong);
-  const songAnalysis = useSelector(selectSongAnalysis);
-  const noActivePlayback = useSelector(selectNoActivePlayback);
+  const dispatch = useAppDispatch();
+  const currSong = useAppSelector(selectSong);
+  const songAnalysis = useAppSelector(selectSongAnalysis);
+  const noActivePlayback = useAppSelector(selectNoActivePlayback);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function getCurrPlaying() {
     setLoading(true);
@@ -47,19 +50,19 @@ function CurrSong() {
 
     try {
       const response = await fetch("/api/spotify/discover", { method: "POST" });
-      const data = await response.json();
+      const data: DiscoverResponse = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong, please try again.");
+      if (!response.ok || "error" in data) {
+        throw new Error("error" in data ? data.error : "Something went wrong, please try again.");
       }
 
-      if (data.noActivePlayback) {
+      if ("noActivePlayback" in data) {
         dispatch(setNoActivePlayback());
       } else {
         dispatch(updateDiscoverResults(data));
       }
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -73,7 +76,7 @@ function CurrSong() {
         ) : (
           <h1 className="overflow">
             {" "}
-            Welcome to Explorify! Click the 'Start' button to get started{" "}
+            Welcome to Explorify! Click the &apos;Start&apos; button to get started{" "}
           </h1>
         )}
       </div>
@@ -81,7 +84,7 @@ function CurrSong() {
         <div className="songinfo">
           {currSong ? (
             <div className="albumCover">
-              <FlipCard className="albumCover" />
+              <FlipCard />
             </div>
           ) : (
             <img

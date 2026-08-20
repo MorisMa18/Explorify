@@ -10,36 +10,40 @@ import ArtistCard from "./ArtistCard";
 
 // Redux
 import { selectArtistRecommendations } from "@/store/songSlice";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hooks";
 
 // owl.carousel (bundled inside react-owl-carousel's UMD build) is old enough to call
 // several jQuery utility methods that jQuery's newer ESM build (what a bare
 // `import("jquery")` resolves to under webpack) has dropped, even though jQuery 3.x's
 // classic build still carries them. Import that classic build explicitly, and keep a
 // small guarded polyfill on top as a safety net for anything still missing.
-function polyfillLegacyJqueryUtils($) {
-  if (!$.camelCase) {
-    $.camelCase = (string) => string.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+function polyfillLegacyJqueryUtils($: JQueryStatic) {
+  // @types/jquery's declared signatures for these (e.g. isWindow's type predicate,
+  // type's string-literal union) are stricter than this defensive runtime patch
+  // needs to satisfy — cast locally rather than fight them.
+  const jq = $ as any;
+  if (!jq.camelCase) {
+    jq.camelCase = (string: string) => string.replace(/-([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
   }
-  if (!$.type) {
-    $.type = (obj) => {
+  if (!jq.type) {
+    jq.type = (obj: unknown) => {
       if (obj == null) return `${obj}`;
       return typeof obj === "object" || typeof obj === "function"
         ? Object.prototype.toString.call(obj).slice(8, -1).toLowerCase()
         : typeof obj;
     };
   }
-  if (!$.isFunction) {
-    $.isFunction = (obj) => typeof obj === "function";
+  if (!jq.isFunction) {
+    jq.isFunction = (obj: unknown) => typeof obj === "function";
   }
-  if (!$.isArray) {
-    $.isArray = Array.isArray;
+  if (!jq.isArray) {
+    jq.isArray = Array.isArray;
   }
-  if (!$.isWindow) {
-    $.isWindow = (obj) => obj != null && obj === obj.window;
+  if (!jq.isWindow) {
+    jq.isWindow = (obj: any) => obj != null && obj === obj.window;
   }
-  if (!$.trim) {
-    $.trim = (text) => (text == null ? "" : String(text).trim());
+  if (!jq.trim) {
+    jq.trim = (text?: string | null) => (text == null ? "" : String(text).trim());
   }
 }
 
@@ -59,14 +63,14 @@ const OwlCarousel = dynamic(
 );
 
 function RecommendedArtists() {
-  const artistRecommendations = useSelector(selectArtistRecommendations);
+  const artistRecommendations = useAppSelector(selectArtistRecommendations);
 
   return (
     <div className="recommendedArtists">
       <h2> Artists You Might Like </h2>
       <div className="artists">
         {artistRecommendations.length !== 0 ? (
-          <OwlCarousel className="owl-theme" loop items="4" dots autoplay autoplayTimeout="2500" nav>
+          <OwlCarousel className="owl-theme" loop items={4} dots autoplay autoplayTimeout={2500} nav>
             {artistRecommendations.slice(0, 9).map((artist) => (
               <ArtistCard key={artist.id} artist={artist} />
             ))}
