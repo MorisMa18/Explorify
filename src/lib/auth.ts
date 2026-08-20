@@ -1,4 +1,6 @@
 import SpotifyProvider from "next-auth/providers/spotify";
+import type { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 
 const SPOTIFY_SCOPES = [
   "user-read-currently-playing",
@@ -12,7 +14,7 @@ const SPOTIFY_SCOPES = [
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 
-async function refreshSpotifyAccessToken(token) {
+async function refreshSpotifyAccessToken(token: JWT): Promise<JWT> {
   try {
     const basicAuth = Buffer.from(
       `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
@@ -46,11 +48,11 @@ async function refreshSpotifyAccessToken(token) {
   }
 }
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     SpotifyProvider({
-      clientId: process.env.SPOTIFY_CLIENT_ID,
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+      clientId: process.env.SPOTIFY_CLIENT_ID!,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
       authorization: `https://accounts.spotify.com/authorize?scope=${SPOTIFY_SCOPES}&show_dialog=true`,
     }),
   ],
@@ -64,9 +66,10 @@ export const authOptions = {
       if (account) {
         return {
           ...token,
-          accessToken: account.access_token,
-          refreshToken: account.refresh_token,
-          accessTokenExpires: account.expires_at * 1000,
+          // Spotify's OAuth response always includes access_token/refresh_token/expires_at.
+          accessToken: account.access_token!,
+          refreshToken: account.refresh_token!,
+          accessTokenExpires: account.expires_at! * 1000,
           // providerAccountId is next-auth's guaranteed field for the provider's user
           // id — more robust than relying on the raw Spotify profile's shape.
           spotifyId: account.providerAccountId,

@@ -6,11 +6,11 @@ import "./RecommendedSongs.css";
 import Song from "./Song";
 
 // Redux Stuff
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hooks";
 import { selectSongRecommendations } from "@/store/songSlice";
 
 function RecommendedSongs() {
-  const songRecommendations = useSelector(selectSongRecommendations);
+  const songRecommendations = useAppSelector(selectSongRecommendations);
 
   return (
     <div className="recommendations">

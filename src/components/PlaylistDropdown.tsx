@@ -1,20 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import "./PlaylistDropdown.css";
 import { CSSTransition } from "react-transition-group";
+import type { SpotifySimplifiedPlaylist } from "@/types/spotify";
+import { getErrorMessage } from "@/lib/errors";
 
-function PlaylistDropdown(props) {
-  const [activeMenu, setActiveMenu] = useState("main");
-  const [menuHeight, setMenuHeight] = useState(null);
+type DropdownMenuName = "main" | "playlists" | "createPlaylist";
 
-  const [playlists, setPlaylists] = useState([]);
+interface PlaylistDropdownProps {
+  topCoord: number;
+  trackUri: string;
+}
+
+type PlaylistsResponse = { playlists: SpotifySimplifiedPlaylist[] } | { error: string };
+type CreatePlaylistResponse = { playlist: SpotifySimplifiedPlaylist } | { error: string };
+
+function PlaylistDropdown(props: PlaylistDropdownProps) {
+  const [activeMenu, setActiveMenu] = useState<DropdownMenuName>("main");
+  const [menuHeight, setMenuHeight] = useState<number | null>(null);
+
+  const [playlists, setPlaylists] = useState<SpotifySimplifiedPlaylist[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
-  const [playlistsError, setPlaylistsError] = useState(null);
+  const [playlistsError, setPlaylistsError] = useState<string | null>(null);
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Lazy-load: this component only mounts once the "..." button is opened, so
   // playlists are fetched on demand rather than eagerly for every page load.
@@ -24,11 +36,13 @@ function PlaylistDropdown(props) {
     async function loadPlaylists() {
       try {
         const response = await fetch("/api/spotify/playlists");
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Failed to load playlists");
+        const data: PlaylistsResponse = await response.json();
+        if (!response.ok || "error" in data) {
+          throw new Error("error" in data ? data.error : "Failed to load playlists");
+        }
         if (!cancelled) setPlaylists(data.playlists);
       } catch (err) {
-        if (!cancelled) setPlaylistsError(err.message);
+        if (!cancelled) setPlaylistsError(getErrorMessage(err));
       } finally {
         if (!cancelled) setLoadingPlaylists(false);
       }
@@ -40,13 +54,13 @@ function PlaylistDropdown(props) {
     };
   }, []);
 
-  function calcHeight(el) {
+  function calcHeight(el: HTMLElement) {
     // TODO: avoid fixed value
     const height = el.offsetHeight + 30;
     setMenuHeight(height);
   }
 
-  async function addToPlaylist(playlistId) {
+  async function addToPlaylist(playlistId: string) {
     setStatusMessage(null);
     try {
       const response = await fetch(`/api/spotify/playlists/${playlistId}/tracks`, {
@@ -58,11 +72,11 @@ function PlaylistDropdown(props) {
       if (!response.ok) throw new Error(data.error || "Failed to add track");
       setStatusMessage("Added to playlist.");
     } catch (err) {
-      setStatusMessage(err.message);
+      setStatusMessage(getErrorMessage(err));
     }
   }
 
-  async function createPlaylistAndAdd(e) {
+  async function createPlaylistAndAdd(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!newPlaylistName.trim()) return;
 
@@ -74,21 +88,30 @@ function PlaylistDropdown(props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newPlaylistName, trackUri: props.trackUri }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Failed to create playlist");
+      const data: CreatePlaylistResponse = await response.json().catch(() => ({ error: "Failed to create playlist" }));
+      if (!response.ok || "error" in data) {
+        throw new Error("error" in data ? data.error : "Failed to create playlist");
+      }
       setPlaylists((prev) => [data.playlist, ...prev]);
       setNewPlaylistName("");
       setStatusMessage(`Created "${data.playlist.name}" and added the track.`);
       setActiveMenu("main");
     } catch (err) {
-      setStatusMessage(err.message);
+      setStatusMessage(getErrorMessage(err));
     } finally {
       setCreating(false);
     }
   }
 
+  interface DropdownItemProps {
+    goToMenu?: DropdownMenuName;
+    onSelect?: () => void;
+    leftIcon?: ReactNode;
+    children?: ReactNode;
+  }
+
   // ITEM FOR DROPDOWN
-  function DropdownItem(itemProps) {
+  function DropdownItem(itemProps: DropdownItemProps) {
     return (
       // eslint-disable-next-line jsx-a11y/anchor-is-valid
       <a
@@ -108,7 +131,7 @@ function PlaylistDropdown(props) {
   }
 
   return (
-    <div className="dropdown" style={{ height: menuHeight, top: props.topCoord }}>
+    <div className="dropdown" style={{ height: menuHeight ?? undefined, top: props.topCoord }}>
       {/* Main dropdown page  */}
       <CSSTransition
         in={activeMenu === "main"}

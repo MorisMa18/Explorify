@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import "./AddToPlaylistButton.css";
 
 import MoreVertRoundedIcon from "@material-ui/icons/MoreVertRounded";
 
-function AddToPlaylistButton(props) {
+interface AddToPlaylistButtonProps {
+  children: ReactNode;
+}
+
+function AddToPlaylistButton(props: AddToPlaylistButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (

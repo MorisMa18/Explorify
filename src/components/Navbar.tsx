@@ -18,7 +18,7 @@ function Navbar() {
       </div>
 
       <div className="navbar__right">
-        <Avatar src={user?.image} />
+        <Avatar src={user?.image ?? undefined} />
         <p> {user?.name} </p>
         <ExitToAppRoundedIcon
           className="logoutIcon"

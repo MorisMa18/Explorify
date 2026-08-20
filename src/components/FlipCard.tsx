@@ -2,17 +2,18 @@
 
 import "./FlipCard.css";
 import { selectSong } from "@/store/songSlice";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hooks";
 
 function FlipCard() {
-  const currSong = useSelector(selectSong);
+  // FlipCard is only ever rendered by CurrSong inside a truthy `currSong` check.
+  const currSong = useAppSelector(selectSong)!;
 
   return (
     <div className="flip__card">
       <div className="flip__card__inner">
         <div className="flip__card__front">
           <img
-            src={currSong.songPicture}
+            src={currSong.songPicture ?? undefined}
             alt="Album Cover"
             width="500"
             height="500"
@@ -20,7 +21,7 @@ function FlipCard() {
         </div>
         <div className="flip__card__back">
           <img
-            src={currSong.songPicture}
+            src={currSong.songPicture ?? undefined}
             alt="Album Cover"
             width="500"
             height="500"
