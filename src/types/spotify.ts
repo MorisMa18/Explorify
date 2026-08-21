@@ -89,19 +89,57 @@ export interface SpotifyTrack {
   uri: string;
 }
 
-// GET /me/player
+// Device Object — embedded in GET /me/player
+export interface SpotifyDevice {
+  id: string | null;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  name: string;
+  type: string;
+  volume_percent: number | null;
+  supports_volume: boolean;
+}
+
+// Context Object — embedded in GET /me/player when playback started from a
+// playlist/album/artist context; null otherwise (e.g. an ad, or a locally-queued track)
+export interface SpotifyPlaybackContext {
+  type: string;
+  href: string;
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+}
+
+// Disallows Object — embedded in GET /me/player; every field is optional since
+// Spotify only includes the actions currently disallowed
+export interface SpotifyPlaybackActions {
+  interrupting_playback?: boolean;
+  pausing?: boolean;
+  resuming?: boolean;
+  seeking?: boolean;
+  skipping_next?: boolean;
+  skipping_prev?: boolean;
+  toggling_repeat_context?: boolean;
+  toggling_shuffle?: boolean;
+  toggling_repeat_track?: boolean;
+  transferring_playback?: boolean;
+}
+
+// GET /me/player. `item` is only meaningful as a SpotifyTrack when
+// currently_playing_type is "track" — for "episode"/"ad"/"unknown" Spotify
+// actually returns a differently-shaped object; callers must check
+// currently_playing_type before trusting track-specific fields.
 export interface SpotifyCurrentlyPlaying {
-  device?: {
-    id: string | null;
-    is_active: boolean;
-    name: string;
-    type: string;
-    volume_percent: number | null;
-  };
+  device: SpotifyDevice;
+  repeat_state: "off" | "track" | "context";
+  shuffle_state: boolean;
+  context: SpotifyPlaybackContext | null;
+  timestamp: number;
   progress_ms: number | null;
   is_playing: boolean;
   item: SpotifyTrack | null;
   currently_playing_type: "track" | "episode" | "ad" | "unknown";
+  actions: SpotifyPlaybackActions;
 }
 
 // Simplified User Object — as embedded in Playlist objects
@@ -185,3 +223,21 @@ export interface DiscoverError {
 }
 
 export type DiscoverResponse = DiscoverNoActivePlayback | DiscoverSuccess | DiscoverError;
+
+// GET /api/spotify/current-track response shapes
+export interface CurrentTrackSuccess {
+  currSong: CurrSong;
+}
+
+export interface CurrentTrackNoActivePlayback {
+  noActivePlayback: true;
+}
+
+export interface CurrentTrackError {
+  error: string;
+}
+
+export type CurrentTrackResponse =
+  | CurrentTrackSuccess
+  | CurrentTrackNoActivePlayback
+  | CurrentTrackError;

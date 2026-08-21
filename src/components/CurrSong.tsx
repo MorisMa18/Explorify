@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./CurrSong.css";
 import emptyMixImage from "../images/emptymix.svg";
 
@@ -11,6 +11,7 @@ import {
   selectNoActivePlayback,
   updateDiscoverResults,
   setNoActivePlayback,
+  setCurrSong,
 } from "@/store/songSlice";
 
 // UI Components
@@ -22,7 +23,7 @@ import FlipCard from "./FlipCard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 import { getErrorMessage } from "@/lib/errors";
-import type { DiscoverResponse } from "@/types/spotify";
+import type { CurrentTrackResponse, DiscoverResponse } from "@/types/spotify";
 
 function formatDuration(durationMs: number) {
   const totalSeconds = Math.round(durationMs / 1000);
@@ -67,6 +68,41 @@ function CurrSong() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentTrack() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/spotify/current-track");
+        const data: CurrentTrackResponse = await response.json();
+
+        if (!response.ok || "error" in data) {
+          throw new Error("error" in data ? data.error : "Something went wrong, please try again.");
+        }
+
+        if (cancelled) return;
+
+        if ("noActivePlayback" in data) {
+          dispatch(setNoActivePlayback());
+        } else {
+          dispatch(setCurrSong(data.currSong));
+        }
+      } catch (err) {
+        if (!cancelled) setError(getErrorMessage(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadCurrentTrack();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
 
   return (
     <div className="currsong">
