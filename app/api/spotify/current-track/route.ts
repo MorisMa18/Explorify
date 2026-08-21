@@ -3,8 +3,6 @@ import { getAccessToken, spotifyFetch, SpotifyApiError } from "@/lib/spotifyApi"
 import { getErrorMessage } from "@/lib/errors";
 import type { CurrentTrackResponse, SpotifyCurrentlyPlaying } from "@/types/spotify";
 
-export const runtime = "nodejs";
-
 export async function GET(req: NextRequest): Promise<NextResponse<CurrentTrackResponse>> {
   const accessToken = await getAccessToken(req);
   if (!accessToken) {
