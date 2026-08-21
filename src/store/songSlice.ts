@@ -48,10 +48,14 @@ export const songSlice = createSlice({
     setNowPlayingTrack: (state, action: PayloadAction<string | null>) => {
       state.nowPlayingTrackId = action.payload;
     },
+    setCurrSong: (state, action: PayloadAction<CurrSong>) => {
+      state.currSong = action.payload;
+      state.noActivePlayback = false;
+    },
   },
 });
 
-export const { updateDiscoverResults, setNoActivePlayback, setNowPlayingTrack } =
+export const { updateDiscoverResults, setNoActivePlayback, setNowPlayingTrack, setCurrSong } =
   songSlice.actions;
 
 export const selectSong = (state: { song: SongState }) => state.song.currSong;

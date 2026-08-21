@@ -1,19 +1,3 @@
-// Spotify Web API object types, sized to what this app actually reads/passes
-// through. See https://developer.spotify.com/documentation/web-api/reference
-// for the full reference; the app's routes deliberately avoid /recommendations,
-// /related-artists and /audio-features (deprecated 2024-11-27) — see the
-// comment at the top of app/api/spotify/discover/route.ts.
-
-export interface SpotifyImage {
-  url: string;
-  height: number | null;
-  width: number | null;
-}
-
-export interface SpotifyExternalUrls {
-  spotify: string;
-}
-
 export interface SpotifyFollowers {
   href: string | null;
   total: number;
@@ -41,67 +25,6 @@ export interface SpotifyArtist {
   popularity?: number;
   type: "artist";
   uri: string;
-}
-
-// Simplified Artist Object — as embedded in Track/Album objects
-export interface SpotifySimplifiedArtist {
-  external_urls: SpotifyExternalUrls;
-  href: string;
-  id: string;
-  name: string;
-  type: "artist";
-  uri: string;
-}
-
-// Simplified Album Object — as embedded in Track objects
-export interface SpotifySimplifiedAlbum {
-  album_type: "album" | "single" | "compilation";
-  total_tracks: number;
-  external_urls: SpotifyExternalUrls;
-  href: string;
-  id: string;
-  images: SpotifyImage[];
-  name: string;
-  release_date: string;
-  release_date_precision: "year" | "month" | "day";
-  type: "album";
-  uri: string;
-  artists: SpotifySimplifiedArtist[];
-}
-
-// Track Object (full) — GET /me/player, top-tracks, search (type=track)
-export interface SpotifyTrack {
-  album: SpotifySimplifiedAlbum;
-  artists: SpotifySimplifiedArtist[];
-  available_markets?: string[];
-  disc_number: number;
-  duration_ms: number;
-  explicit: boolean;
-  external_urls: SpotifyExternalUrls;
-  href: string;
-  id: string;
-  is_local?: boolean;
-  name: string;
-  popularity: number;
-  preview_url: string | null;
-  track_number: number;
-  type: "track";
-  uri: string;
-}
-
-// GET /me/player
-export interface SpotifyCurrentlyPlaying {
-  device?: {
-    id: string | null;
-    is_active: boolean;
-    name: string;
-    type: string;
-    volume_percent: number | null;
-  };
-  progress_ms: number | null;
-  is_playing: boolean;
-  item: SpotifyTrack | null;
-  currently_playing_type: "track" | "episode" | "ad" | "unknown";
 }
 
 // Simplified User Object — as embedded in Playlist objects
@@ -148,17 +71,6 @@ export interface SpotifySearchArtistsResponse {
 
 // ---- Bespoke app-level DTOs (NOT raw Spotify shapes) ----
 
-// The Redux "current song" summary built server-side by the discover route —
-// distinct from a raw SpotifyTrack.
-export interface CurrSong {
-  songId: string;
-  songUri: string;
-  songName: string;
-  songArtist: string;
-  songArtistId: string;
-  songPicture: string | null;
-  songPopularity: number;
-}
 
 export interface SongAnalysis {
   popularity: number;
@@ -185,3 +97,135 @@ export interface DiscoverError {
 }
 
 export type DiscoverResponse = DiscoverNoActivePlayback | DiscoverSuccess | DiscoverError;
+
+/** -------------------------
+ * Spotify API schemas
+ ----------------------------*/
+
+// GET /me/player returned by the Spotify API
+export interface SpotifyCurrentlyPlaying {
+  device: SpotifyDevice;
+  repeat_state: "off" | "track" | "context";
+  shuffle_state: boolean;
+  context: SpotifyPlaybackContext | null;
+  timestamp: number;
+  progress_ms: number | null;
+  is_playing: boolean;
+  item: SpotifyTrack | null;
+  currently_playing_type: "track" | "episode" | "ad" | "unknown";
+  actions: SpotifyPlaybackActions;
+}
+
+export interface SpotifyDevice {
+  id: string | null;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  name: string;
+  type: string;
+  volume_percent: number | null;
+  supports_volume: boolean;
+}
+
+export interface SpotifyPlaybackContext {
+  type: string;
+  href: string;
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+}
+
+export interface SpotifyTrack {
+  album: SpotifySimplifiedAlbum;
+  artists: SpotifySimplifiedArtist[];
+  disc_number: number;
+  duration_ms: number;
+  explicit: boolean;
+  external_urls: SpotifyExternalUrls;
+  href: string;
+  id: string;
+  name: string;
+  popularity: number;
+  preview_url: string | null;
+  track_number: number;
+  type: "track";
+  uri: string;
+}
+
+export interface SpotifyExternalUrls {
+  spotify: string;
+}
+
+export interface SpotifyPlaybackActions {
+  interrupting_playback?: boolean;
+  pausing?: boolean;
+  resuming?: boolean;
+  seeking?: boolean;
+  skipping_next?: boolean;
+  skipping_prev?: boolean;
+  toggling_repeat_context?: boolean;
+  toggling_shuffle?: boolean;
+  toggling_repeat_track?: boolean;
+  transferring_playback?: boolean;
+}
+
+export interface SpotifySimplifiedAlbum {
+  album_type: "album" | "single" | "compilation";
+  total_tracks: number;
+  external_urls: SpotifyExternalUrls;
+  href: string;
+  id: string;
+  images: SpotifyImage[];
+  name: string;
+  release_date: string;
+  release_date_precision: "year" | "month" | "day";
+  type: "album";
+  uri: string;
+  artists: SpotifySimplifiedArtist[];
+}
+
+export interface SpotifySimplifiedArtist {
+  external_urls: SpotifyExternalUrls;
+  href: string;
+  id: string;
+  name: string;
+  type: "artist";
+  uri: string;
+}
+
+export interface SpotifyImage {
+  url: string;
+  height: number | null;
+  width: number | null;
+}
+
+/** ---------------------------------------------
+ * Custom Explorify backend endpoint schemas
+ ------------------------------------------------*/
+
+export interface CurrSong {
+  songId: string;
+  songUri: string;
+  songName: string;
+  songArtist: string;
+  songArtistId: string;
+  songPicture: string | null;
+  songPopularity: number;
+}
+
+export interface CurrentTrackSuccess {
+  currSong: CurrSong;
+}
+
+export interface CurrentTrackNoActivePlayback {
+  noActivePlayback: true;
+}
+
+export interface CurrentTrackError {
+  error: string;
+}
+
+// Response schema for /app/api/spotify/current-track
+export type CurrentTrackResponse =
+  | CurrentTrackSuccess
+  | CurrentTrackNoActivePlayback
+  | CurrentTrackError;
